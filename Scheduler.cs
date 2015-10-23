@@ -26,7 +26,7 @@ namespace Scheduler
 
         public Scheduler()
         {
-            this.TimeoutObjects = new List<TimeoutObject>();
+            this._timeoutObjects = new List<TimeoutObject>();
         }
 
         #endregion
@@ -50,34 +50,7 @@ namespace Scheduler
                 Scheduler = this,
                 Action = action,
                 ExceptionHandler = exceptionHandler,
-                NextTick = this.Now.Add(delay),
-                Interval = TimeSpan.Zero
-            });
-        }
-
-        /// <summary>
-        /// Adds the specified repeating timeout action.
-        /// </summary>
-        /// <param name="initialDelay">The initial delay.</param>
-        /// <param name="interval">The interval.</param>
-        /// <param name="action">The tick.</param>
-        /// <param name="exceptionHandler">The exception handler </param>
-        /// <returns></returns>
-        public IDisposable SchedulePeriodic(TimeSpan initialDelay, TimeSpan interval, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler)
-        {
-            if (action == null)
-                throw new ArgumentNullException("action");
-
-            if (initialDelay <= TimeSpan.Zero)
-                initialDelay = interval;
-
-            return this.AddInternal(new TimeoutObject
-            {
-                Scheduler = this,
-                Action = action,
-                ExceptionHandler = exceptionHandler,
-                NextTick = Now.Add(initialDelay),
-                Interval = interval
+                NextTick = this.Now.Add(delay)
             });
         }
 
@@ -99,13 +72,13 @@ namespace Scheduler
         /// <param name="timeoutObj">The timeout obj.</param>
         private IDisposable AddInternal(TimeoutObject timeoutObj)
         {
-            lock (this.TimeoutObjects)
+            lock (this._timeoutObjects)
             {
-                this.TimeoutObjects.Add(timeoutObj);
-                if (this.TimeoutObjects.Count == 1)
+                this._timeoutObjects.Add(timeoutObj);
+                if (this._timeoutObjects.Count == 1)
                     this.StartTimerThread();
 
-                Monitor.PulseAll(this.TimeoutObjects);
+                Monitor.PulseAll(this._timeoutObjects);
             }
 
             return timeoutObj;
@@ -117,13 +90,13 @@ namespace Scheduler
         /// <param name="timeoutObj">The timeout obj.</param>
         private void RemoveInternal(TimeoutObject timeoutObj)
         {
-            lock (this.TimeoutObjects)
+            lock (this._timeoutObjects)
             {
-                this.TimeoutObjects.Remove(timeoutObj);
-                if (this.TimeoutObjects.Count == 0)
+                this._timeoutObjects.Remove(timeoutObj);
+                if (this._timeoutObjects.Count == 0)
                     this.StopTimerThread();
 
-                Monitor.PulseAll(this.TimeoutObjects);
+                Monitor.PulseAll(this._timeoutObjects);
             }
         }
 
@@ -132,11 +105,11 @@ namespace Scheduler
         /// </summary>
         private void ClearInternal()
         {
-            lock (this.TimeoutObjects)
+            lock (this._timeoutObjects)
             {
-                this.TimeoutObjects.Clear();
+                this._timeoutObjects.Clear();
                 this.StopTimerThread();
-                Monitor.PulseAll(this.TimeoutObjects);
+                Monitor.PulseAll(this._timeoutObjects);
             }
         }
 
@@ -146,21 +119,21 @@ namespace Scheduler
 
         private void StartTimerThread()
         {
-            lock (this.TimeoutObjects)
+            lock (this._timeoutObjects)
             {
-                this.TimerThread = new Thread(this.RunTimerThread);
-                this.TimerThread.IsBackground = true;
-                this.TimerThread.Start();
+                this._timerThread = new Thread(this.RunTimerThread);
+                this._timerThread.IsBackground = true;
+                this._timerThread.Start();
             }
         }
 
         private void StopTimerThread()
         {
-            lock (this.TimeoutObjects)
+            lock (this._timeoutObjects)
             {
                 // Set the timerthread to null which is the key to stop it and then signal it
-                this.TimerThread = null;
-                Monitor.PulseAll(this.TimeoutObjects);
+                this._timerThread = null;
+                Monitor.PulseAll(this._timeoutObjects);
             }
         }
 
@@ -170,26 +143,26 @@ namespace Scheduler
 
             while (true)
             {
-                TimeoutObject nextTimeout = null;
+                TimeoutObject nextTimeout;
 
-                lock (this.TimeoutObjects)
+                lock (this._timeoutObjects)
                 {
                     // The thread is no longer running so break out
-                    if (this.TimerThread != thread)
+                    if (this._timerThread != thread)
                         break;
 
                     // If we have no items left then exit the thread
-                    if (this.TimeoutObjects.Count == 0)
+                    if (this._timeoutObjects.Count == 0)
                         break;
 
                     // Get our next timeout object
-                    nextTimeout = this.TimeoutObjects.Where(o => !o.IsExecuting).OrderBy(o => o.NextTick).FirstOrDefault();
+                    nextTimeout = this._timeoutObjects.OrderBy(o => o.NextTick).FirstOrDefault();
 
                     // If we didn't find anything that means all timeouts are executing still
                     // So just wait indefinitely until someone wakes us up
                     if (nextTimeout == null)
                     {
-                        Monitor.Wait(this.TimeoutObjects);
+                        Monitor.Wait(this._timeoutObjects);
                         continue;
                     }
 
@@ -204,58 +177,43 @@ namespace Scheduler
                     if (timeRemaining.TotalMilliseconds > 0)
                     {
                         // Wait until we get pulsed or our timeout is up then make sure we're still running and try again
-                        Monitor.Wait(this.TimeoutObjects, timeRemaining);
+                        Monitor.Wait(this._timeoutObjects, timeRemaining);
                         continue;
                     }
 
-                    // If the object we're about to execute is a one time action then just remove it now
-                    if (nextTimeout.Interval == TimeSpan.Zero)
-                        this.RemoveInternal(nextTimeout);
+                    // we're about to execute this action so just remove it now
+                    this.RemoveInternal(nextTimeout);
                 }
 
                 // Trigger the next timeout
-                // Create a local variable to avoid issues with the closure
-                var obj = nextTimeout;
-                obj.IsExecuting = true;
-                ThreadPool.UnsafeQueueUserWorkItem(data =>
+                ThreadPool.UnsafeQueueUserWorkItem(HandleTimeout, nextTimeout);
+            }
+        }
+
+        private void HandleTimeout(object data)
+        {
+            var obj = (TimeoutObject) data;
+
+            // Execute the tick and then figure out the next tick time
+            try
+            {
+                obj.Action(this);
+            }
+            catch (Exception exception)
+            {
+                Break();
+                Trace.WriteLine(exception, "TimeoutDispatcher");
+
+                try
                 {
-                    // Execute the tick and then figure out the next tick time
-                    try
-                    {
-                        obj.Action(this);
-                    }
-                    catch (Exception exception)
-                    {
-                        Break();
-                        Trace.WriteLine(exception, "TimeoutDispatcher");
-
-                        try
-                        {
-                            if (obj.ExceptionHandler != null)
-                                obj.ExceptionHandler(this, exception);
-                        }
-                        catch (Exception)
-                        {
-                            //if there was an exception in the exception handler we will just silence it.
-                            Break();
-                        }
-                    }
-
-                    obj.NextTick = Now.Add(obj.Interval);
-                    obj.IsExecuting = false;
-
-                    // If this is a repeating job then we should probably notify our thread
-                    // That we updated the next tick time so it knows how long to wait
-                    if (obj.Interval == TimeSpan.Zero)
-                        return;
-
-                    lock (this.TimeoutObjects)
-                    {
-                        // Since some time may have passed make sure we're still valid before signaling
-                        if (this.TimeoutObjects.Contains(obj))
-                            Monitor.PulseAll(this.TimeoutObjects);
-                    }
-                }, null);
+                    if (obj.ExceptionHandler != null)
+                        obj.ExceptionHandler(this, exception);
+                }
+                catch (Exception)
+                {
+                    //if there was an exception in the exception handler we will just silence it.
+                    Break();
+                }
             }
         }
 
@@ -270,147 +228,10 @@ namespace Scheduler
 
         #region Properties
 
-        protected Thread TimerThread
-        {
-            get;
-            private set;
-        }
+        private Thread _timerThread;
 
-        protected List<TimeoutObject> TimeoutObjects
-        {
-            get;
-            private set;
-        }
+        private readonly List<TimeoutObject> _timeoutObjects;
 
         #endregion
-
-        #region Classes
-
-        /// <summary>
-        /// Represents a disposable timeout object used internally by the TimeoutDispatcher
-        /// </summary>
-        protected class TimeoutObject : IDisposable
-        {
-            public TimeoutObject()
-            {
-            }
-
-            public TimeoutObject(IScheduler scheduler, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler, TimeSpan delay, TimeSpan interval)
-            {
-                this.Scheduler = scheduler;
-                this.Action = action;
-                this.ExceptionHandler = exceptionHandler;
-                this.NextTick = scheduler.Now.Add(delay);
-                this.Interval = interval;
-            }
-
-            public void Dispose()
-            {
-                this.IsCancelled = true;
-            }
-
-            /// <summary>
-            /// Gets a value indicating whether this instance is cancelled.
-            /// </summary>
-            /// <value>
-            /// <c>true</c> if this instance is cancelled; otherwise, <c>false</c>.
-            /// </value>
-            public bool IsCancelled { get; private set; }
-
-            /// <summary>
-            /// Gets or sets the dispatcher.
-            /// </summary>
-            /// <value>
-            /// The dispatcher.
-            /// </value>
-            public IScheduler Scheduler
-            {
-                get;
-                set;
-            }
-
-            /// <summary>
-            /// Gets or sets the tick action.
-            /// </summary>
-            /// <value>
-            /// The tick.
-            /// </value>
-            public Action<IScheduler> Action
-            {
-                get;
-                set;
-            }
-
-            /// <summary>
-            /// Gets or sets the exception action.
-            /// </summary>
-            /// <value>
-            /// The exception handler.
-            /// </value>
-            public Action<IScheduler, Exception> ExceptionHandler
-            {
-                get;
-                set;
-            }
-
-            /// <summary>
-            /// Gets or sets a value indicating whether this instance is executing.
-            /// </summary>
-            /// <value>
-            /// 	<c>true</c> if this instance is executing; otherwise, <c>false</c>.
-            /// </value>
-            public bool IsExecuting
-            {
-                get;
-                set;
-            }
-
-            /// <summary>
-            /// Gets or sets the next tick.
-            /// </summary>
-            /// <value>
-            /// The next tick.
-            /// </value>
-            public DateTimeOffset NextTick
-            {
-                get;
-                set;
-            }
-
-            /// <summary>
-            /// Gets or sets the interval.
-            /// </summary>
-            /// <value>
-            /// The interval.
-            /// </value>
-            public TimeSpan Interval
-            {
-                get;
-                set;
-            }
-
-            /// <summary>
-            /// Gets a value indicating whether the NextTick has elapsed.
-            /// </summary>
-            /// <value>
-            /// 	<c>true</c> if the NextTick has elapsed; otherwise, <c>false</c>.
-            /// </value>
-            public bool IsElapsed
-            {
-                get { return (Scheduler.Now >= this.NextTick); }
-            }
-
-            /// <summary>
-            /// Gets the time remaining.
-            /// </summary>
-            public TimeSpan TimeRemaining
-            {
-                get { return this.NextTick.Subtract(Scheduler.Now); }
-            }
-
-        }
-
-        #endregion
-
     }
 }

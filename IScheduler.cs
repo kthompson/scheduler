@@ -17,15 +17,5 @@ namespace Scheduler
         /// <param name="exceptionHandler">the exception handler </param>
         /// <returns></returns>
         IDisposable Schedule(TimeSpan delay, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler);
-
-        /// <summary>
-        /// Adds the specified repeating timeout action.
-        /// </summary>
-        /// <param name="initialDelay">The initial delay.</param>
-        /// <param name="interval">The interval.</param>
-        /// <param name="action">The tick.</param>
-        /// <param name="exceptionHandler">The exception handler </param>
-        /// <returns></returns>
-        IDisposable SchedulePeriodic(TimeSpan initialDelay, TimeSpan interval, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler);
     }
 }

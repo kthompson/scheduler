@@ -59,11 +59,8 @@ namespace Scheduler
                 if (timeRemaining.TotalMilliseconds > 0)
                     break;
 
-                // If the object we're about to execute is a one time action then just remove it now
-                if (nextTimeout.Interval == TimeSpan.Zero)
-                {
-                    this._timeoutObjects.Remove(nextTimeout);
-                }
+                // we're about to execute the action so just remove it now
+                this._timeoutObjects.Remove(nextTimeout);
 
                 // Execute the tick and then figure out the next tick time
                 try
@@ -83,39 +80,22 @@ namespace Scheduler
                     {
                     }
                 }
-
-                nextTimeout.NextTick = nextTimeout.NextTick.Add(nextTimeout.Interval);
             }
         }
 
         public IDisposable Schedule(TimeSpan delay, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler)
         {
-            return this.AddInternal(new TimeoutObject(this, action, exceptionHandler, delay, TimeSpan.Zero));
-        }
-
-        private IDisposable AddInternal(TimeoutObject timeoutObj)
-        {
-            this._timeoutObjects.Add(timeoutObj);
-            return timeoutObj;
-        }
-
-        public IDisposable SchedulePeriodic(TimeSpan initialDelay, TimeSpan interval, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler)
-        {
-            if (action == null)
-                throw new ArgumentNullException("action");
-
-            if (initialDelay <= TimeSpan.Zero)
-                initialDelay = interval;
-
-            return this.AddInternal(new TimeoutObject
+            var timeoutObj = new TimeoutObject
             {
                 Scheduler = this,
                 Action = action,
                 ExceptionHandler = exceptionHandler,
-                NextTick = Now.Add(initialDelay),
-                Interval = interval
-            });
-        }
+                NextTick = this.Now.Add(delay),
+            };
 
+            this._timeoutObjects.Add(timeoutObj);
+
+            return timeoutObj;
+        }
     }
 }

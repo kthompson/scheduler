@@ -7,20 +7,6 @@ namespace Scheduler
     /// </summary>
     class TimeoutObject : IDisposable
     {
-
-        public TimeoutObject(IScheduler scheduler, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler, TimeSpan delay, TimeSpan interval)
-        {
-            this.Scheduler = scheduler;
-            this.Action = action;
-            this.ExceptionHandler = exceptionHandler;
-            this.NextTick = scheduler.Now.Add(delay);
-            this.Interval = interval;
-        }
-
-        public TimeoutObject()
-        {
-        }
-
         public void Dispose()
         {
             this.IsCancelled = true;
@@ -77,18 +63,6 @@ namespace Scheduler
         /// The next tick.
         /// </value>
         public DateTimeOffset NextTick
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        /// Gets or sets the interval.
-        /// </summary>
-        /// <value>
-        /// The interval.
-        /// </value>
-        public TimeSpan Interval
         {
             get;
             set;
