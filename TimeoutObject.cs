@@ -21,18 +21,6 @@ namespace Scheduler
         public bool IsCancelled { get; private set; }
 
         /// <summary>
-        /// Gets or sets the dispatcher.
-        /// </summary>
-        /// <value>
-        /// The dispatcher.
-        /// </value>
-        public IScheduler Scheduler
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
         /// Gets or sets the tick action.
         /// </summary>
         /// <value>
@@ -67,25 +55,5 @@ namespace Scheduler
             get;
             set;
         }
-
-        /// <summary>
-        /// Gets a value indicating whether the NextTick has elapsed.
-        /// </summary>
-        /// <value>
-        /// 	<c>true</c> if the NextTick has elapsed; otherwise, <c>false</c>.
-        /// </value>
-        public bool IsElapsed
-        {
-            get { return (Scheduler.Now >= this.NextTick); }
-        }
-
-        /// <summary>
-        /// Gets the time remaining.
-        /// </summary>
-        public TimeSpan TimeRemaining
-        {
-            get { return this.NextTick.Subtract(Scheduler.Now); }
-        }
-
     }
 }

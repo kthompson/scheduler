@@ -47,7 +47,6 @@ namespace Scheduler
 
             return this.AddInternal(new TimeoutObject
             {
-                Scheduler = this,
                 Action = action,
                 ExceptionHandler = exceptionHandler,
                 NextTick = this.Now.Add(delay)
@@ -173,7 +172,7 @@ namespace Scheduler
                     }
 
                     // If our next timeout is not ready then wait for it to be
-                    var timeRemaining = nextTimeout.TimeRemaining;
+                    var timeRemaining = nextTimeout.NextTick.Subtract(this.Now);
                     if (timeRemaining.TotalMilliseconds > 0)
                     {
                         // Wait until we get pulsed or our timeout is up then make sure we're still running and try again

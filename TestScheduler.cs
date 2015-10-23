@@ -55,7 +55,7 @@ namespace Scheduler
                 }
 
                 // If our next timeout is not ready then break out
-                var timeRemaining = nextTimeout.TimeRemaining;
+                var timeRemaining = nextTimeout.NextTick.Subtract(this.Now);
                 if (timeRemaining.TotalMilliseconds > 0)
                     break;
 
@@ -87,7 +87,6 @@ namespace Scheduler
         {
             var timeoutObj = new TimeoutObject
             {
-                Scheduler = this,
                 Action = action,
                 ExceptionHandler = exceptionHandler,
                 NextTick = this.Now.Add(delay),
