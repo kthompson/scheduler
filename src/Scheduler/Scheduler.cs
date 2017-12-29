@@ -26,17 +26,12 @@ namespace Scheduler
         #region Public Methods
 
         /// <inheritdoc />
-        public IDisposable Schedule(TimeSpan delay, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler)
+        public IDisposable Schedule(TimeSpan delay, Action<IScheduler> action)
         {
             if (action == null)
                 throw new ArgumentNullException(nameof(action));
 
-            return this.AddInternal(new TimeoutObject
-            {
-                Action = action,
-                ExceptionHandler = exceptionHandler,
-                NextTick = this.Now.Add(delay)
-            });
+            return this.AddInternal(new TimeoutObject(action, this.Now.Add(delay)));
         }
 
         /// <summary>
@@ -158,7 +153,7 @@ namespace Scheduler
                     }
 
                     // If our next timeout is not ready then wait for it to be
-                    var timeRemaining = nextTimeout.NextTick.Subtract(this.Now);
+                    var timeRemaining = nextTimeout.NextTick - this.Now;
                     if (timeRemaining.TotalMilliseconds > 0)
                     {
                         // Wait until we get pulsed or our timeout is up then make sure we're still running and try again
@@ -188,16 +183,6 @@ namespace Scheduler
             {
                 Break();
                 Trace.WriteLine(exception, "TimeoutDispatcher");
-
-                try
-                {
-                    obj.ExceptionHandler?.Invoke(this, exception);
-                }
-                catch (Exception)
-                {
-                    //if there was an exception in the exception handler we will just silence it.
-                    Break();
-                }
             }
         }
 

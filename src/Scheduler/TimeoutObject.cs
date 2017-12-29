@@ -7,6 +7,12 @@ namespace Scheduler
     /// </summary>
     internal class TimeoutObject : IDisposable
     {
+        public TimeoutObject(Action<IScheduler> action, DateTimeOffset nextTick)
+        {
+            Action = action;
+            NextTick = nextTick;
+        }
+
         public void Dispose()
         {
             this.IsCancelled = true;
@@ -26,23 +32,7 @@ namespace Scheduler
         /// <value>
         /// The tick.
         /// </value>
-        public Action<IScheduler> Action
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        /// Gets or sets the exception action.
-        /// </summary>
-        /// <value>
-        /// The exception handler.
-        /// </value>
-        public Action<IScheduler, Exception> ExceptionHandler
-        {
-            get;
-            set;
-        }
+        public Action<IScheduler> Action { get; }
 
         /// <summary>
         /// Gets or sets the next tick.
@@ -50,10 +40,6 @@ namespace Scheduler
         /// <value>
         /// The next tick.
         /// </value>
-        public DateTimeOffset NextTick
-        {
-            get;
-            set;
-        }
+        public DateTimeOffset NextTick { get; }
     }
 }

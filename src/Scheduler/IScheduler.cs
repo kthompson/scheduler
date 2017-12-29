@@ -14,8 +14,7 @@ namespace Scheduler
         /// </summary>
         /// <param name="delay">The timeout.</param>
         /// <param name="action">The tick.</param>
-        /// <param name="exceptionHandler">the exception handler </param>
         /// <returns></returns>
-        IDisposable Schedule(TimeSpan delay, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler);
+        IDisposable Schedule(TimeSpan delay, Action<IScheduler> action);
     }
 }

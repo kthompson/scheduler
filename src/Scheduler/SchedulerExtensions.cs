@@ -29,6 +29,42 @@ namespace Scheduler
         }
 
         /// <summary>
+        /// Adds the specified timeout action.
+        /// </summary>
+        /// <param name="this">The Dispatcher.</param>
+        /// <param name="delay">The timeout.</param>
+        /// <param name="action">The tick.</param>
+        /// <param name="exceptionHandler">Handler to deal with exceptions that can occur in <paramref name="action"/></param>
+        /// <returns></returns>
+        public static IDisposable Schedule(this IScheduler @this, TimeSpan delay, Action action, Action<Exception> exceptionHandler)
+        {
+            return @this.Schedule(delay, s => action(), (scheduler, exception) => exceptionHandler(exception));
+        }
+
+        /// <summary>
+        /// Adds the specified timeout action.
+        /// </summary>
+        /// <param name="this">The Dispatcher.</param>
+        /// <param name="delay">The timeout.</param>
+        /// <param name="action">The tick.</param>
+        /// <param name="exceptionHandler">Handler to deal with exceptions that can occur in <paramref name="action"/></param>
+        /// <returns></returns>
+        public static IDisposable Schedule(this IScheduler @this, TimeSpan delay, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler)
+        {
+            return @this.Schedule(delay, s =>
+            {
+                try
+                {
+                    action(s);
+                }
+                catch (Exception exception)
+                {
+                    exceptionHandler(s, exception);
+                }
+            });
+        }
+
+        /// <summary>
         /// Adds the specified repeating timeout action.
         /// </summary>
         /// <param name="this">The Dispatcher.</param>
@@ -91,8 +127,7 @@ namespace Scheduler
         {
             var disposable = new SingleAssignmentDisposable();
 
-            Action<IScheduler> iterate = null;
-            iterate = scheduler =>
+            void Iterate(IScheduler scheduler)
             {
                 try
                 {
@@ -100,11 +135,11 @@ namespace Scheduler
                 }
                 finally
                 {
-                    disposable.Disposable = scheduler.Schedule(interval, iterate);
+                    disposable.Disposable = scheduler.Schedule(interval, Iterate);
                 }
-            };
+            }
 
-            disposable.Disposable = @this.Schedule(delay, iterate);
+            disposable.Disposable = @this.Schedule(delay, Iterate);
 
             return disposable;
         }
@@ -117,11 +152,9 @@ namespace Scheduler
 
             public IDisposable Disposable
             {
-                get { return _disposable; }
                 set
                 {
-                    if (_disposable != null)
-                        _disposable.Dispose();
+                    _disposable?.Dispose();
 
                     _disposable = value;
 
