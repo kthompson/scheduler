@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net452;net462</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <VersionPrefix>0.1.0</VersionPrefix>
+
+    <Description>A simple C# scheduler with test implementation</Description>
+    <PackageTags>scheduler;simple;c#</PackageTags>
+    <PackageReleaseNotes>Add .NET Core support</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/kthompson/scheduler</PackageProjectUrl>
+    <PackageLicenseUrl>https://raw.githubusercontent.com/kthompson/scheduler/master/LICENSE.md</PackageLicenseUrl>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/kthompson/scheduler.git</RepositoryUrl>
+  </PropertyGroup>
+</Project>
