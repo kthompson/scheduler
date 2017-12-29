@@ -9,17 +9,12 @@ namespace Scheduler
 {
     public class TestScheduler : IScheduler
     {
-        private readonly List<TimeoutObject> _timeoutObjects;
+        private readonly List<TimeoutObject> _timeoutObjects = new List<TimeoutObject>();
         private DateTimeOffset _now;
-
-        public TestScheduler()
-        {
-            this._timeoutObjects = new List<TimeoutObject>();
-        }
 
         public DateTimeOffset Now
         {
-            get { return _now; }
+            get => _now;
             private set
             {
                 _now = value;
@@ -73,8 +68,7 @@ namespace Scheduler
 
                     try
                     {
-                        if (nextTimeout.ExceptionHandler != null)
-                            nextTimeout.ExceptionHandler(this, exception);
+                        nextTimeout.ExceptionHandler?.Invoke(this, exception);
                     }
                     catch (Exception)
                     {

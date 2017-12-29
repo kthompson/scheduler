@@ -5,7 +5,7 @@ namespace Scheduler
     /// <summary>
     /// Represents a disposable timeout object used internally by the TimeoutDispatcher
     /// </summary>
-    class TimeoutObject : IDisposable
+    internal class TimeoutObject : IDisposable
     {
         public void Dispose()
         {

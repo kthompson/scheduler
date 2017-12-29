@@ -11,16 +11,8 @@ namespace Scheduler
     /// </summary>
     public sealed class Scheduler : IScheduler
     {
-        /// <summary>
-        /// Gets the scheduler's notion of current time.
-        /// </summary>
-        public DateTimeOffset Now
-        {
-            get
-            {
-                return DateTimeOffset.UtcNow;
-            }
-        }
+        /// <inheritdoc />
+        public DateTimeOffset Now => DateTimeOffset.UtcNow;
 
         #region Constructors
 
@@ -33,17 +25,11 @@ namespace Scheduler
 
         #region Public Methods
 
-        /// <summary>
-        /// Adds the specified timeout action.
-        /// </summary>
-        /// <param name="delay">The timeout.</param>
-        /// <param name="action">The tick.</param>
-        /// <param name="exceptionHandler">the exception handler </param>
-        /// <returns></returns>
+        /// <inheritdoc />
         public IDisposable Schedule(TimeSpan delay, Action<IScheduler> action, Action<IScheduler, Exception> exceptionHandler)
         {
             if (action == null)
-                throw new ArgumentNullException("action");
+                throw new ArgumentNullException(nameof(action));
 
             return this.AddInternal(new TimeoutObject
             {
@@ -205,8 +191,7 @@ namespace Scheduler
 
                 try
                 {
-                    if (obj.ExceptionHandler != null)
-                        obj.ExceptionHandler(this, exception);
+                    obj.ExceptionHandler?.Invoke(this, exception);
                 }
                 catch (Exception)
                 {
