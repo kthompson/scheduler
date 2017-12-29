@@ -1,6 +1,6 @@
 # Scheduler
 
- [![Nuget](https://img.shields.io/nuget/v/Scheduler.svg)](https://www.nuget.org/packages/Scheduler/)
+ [![Nuget](https://img.shields.io/nuget/v/SharpScheduler.svg)](https://www.nuget.org/packages/SharpScheduler/)
 
 Scheduler is a simple C# implementation of a scheduler that support recurring events and unit testing with "Time travel".
 
